@@ -8,18 +8,20 @@ use strict;
 my $MONTH = DateTime->now->subtract( months => 1 )->month;
 my $YEAR = DateTime->now->year;
 
-# contract period
-# TODO where does this come from?
-my $CPSTART = DateTime->new( year => 2014, month => 8, day => 1 )->epoch;
-
 # reporting period
 my $dt = DateTime->new(  year => $YEAR, month => $MONTH, day => 1 );
 my $RPSTART = $dt->epoch;
 my $RPEND = $dt->add( months => 1 )->subtract( seconds => 1 )->epoch;
 
+# load service data
+my $SERVICES;
+my $service_file = $ARGV[0];
+open( my $service_fh, "<", $service_file ) or die "Error opening $service_file: $!";
+&load_services( $service_fh );
+
 # load outage data
 my $OUTAGES;
-my $outage_file = $ARGV[0];
+my $outage_file = $ARGV[1];
 open( my $outage_fh, "<", $outage_file ) or die "Error opening $outage_file: $!";
 &load_outages( $outage_fh );
 
@@ -29,7 +31,26 @@ my $incident_file = $ARGV[1];
 open( my $incident_fh, "<", $incident_file ) or die "Error opening $incident_file: $!";
 &load_incidents( $incident_fh );
 
-print Dumper( $INCIDENTS );
+sub load_services
+{
+    my( $fh ) = @_;
+
+    my $csv = &_init_csv;
+
+	$csv->column_names( @{ $csv->getline( $fh ) } );
+
+	while( my $row = $csv->getline_hr( $fh ) ) 
+	{
+        my $customer = $row->{Customer};
+        my $service = $row->{Service};
+        my $start = str2time( $row->{"Start Date"} );
+        push @{ $SERVICES->{$customer} }, {
+            url => $service,
+            start => $start,
+            # TODO warn if start date more than a year ago?
+        };
+    }
+}
 
 sub load_outages
 {
@@ -76,9 +97,11 @@ sub load_incidents
 
         # filter incidents which didn't get opened in the contract period
         # TODO does an incident opened in a contract period apply to that contract period?
-        next unless ( $CPSTART <= $opened && $opened <= $RPEND );
-
         my $company = $row->{company};
+        my $cpstart = $SERVICES->{$company};
+        warn "No contract start date for $company\n" && last unless defined $cpstart; # TODO better error reporting
+        next unless ( $cpstart <= $opened && $opened <= $RPEND );
+
         my $time_worked = $row->{category} eq "Incident" ? 0 : $row->{"time_worked"};
         $INCIDENTS->{$company}{balance_used} += $time_worked;
 
