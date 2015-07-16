@@ -1,42 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
 
-<h1>Research Technologies Service: Monthly Report</h1>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <title>{ "$report_period - $customer" }</title>
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
 
-<h2>Customer: { $customer }</h2>
-<h2>Reporting Period: {  $report_period }</h2>
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+        <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+</head>
 
-<h3>Support Balance Summary</h3>
+<body>
 
-<table>
-<tr><th>Support allocation (hours):</th><td>{ $allocated = 21 }</td></tr>
-<tr><th>Balance used to date (hours):</th><td>{ $used = $incidents->{$customer}{balance_used} / ( 60 * 60 ) }</td></tr>
-<tr><th>Remaining balance (hours):</th><td>{ $allocated - $used }</td></tr>
-</table>
+    <h1>Research Technologies Service: Monthly Report</h1>
 
-<h3>Support Cases Summary</h3>
+    <h2>Customer: { $customer }</h2>
+    <h2>Reporting Period: {  $report_period }</h2>
 
-<p><em>Summary of support activity this month - note time spent resolving "Incident" call types is not deducted from support allowance</em></p>
+    <h3>Support Balance Summary</h3>
 
-<table>
-    <tr>
-        <th>Description</th>
-        <th>Opened</th>
-        <th>Ticket ID</th>
-        <th>Call Type</th>
-        <th>Priority</th>
-        <th>Status</th>
-        <th>Closed</th>
-        <th>Balance used</th>
-        <th>Resolved within target?</th>
-    </tr>
+    <table>
+        <tr><th>Support allocation (hours):</th><td>{ $allocated = 21 }</td></tr>
+        <tr><th>Balance used to date (hours):</th><td>{ $used = $incidents->{$customer}{balance_used} / ( 60 * 60 ) }</td></tr>
+        <tr><th>Remaining balance (hours):</th><td>{ $allocated - $used }</td></tr>
+    </table>
+
+    <h3>Support Cases Summary</h3>
+
+    <p><em>Summary of support activity this month - note time spent resolving "Incident" call types is not deducted from support allowance</em></p>
+
+    <table>
+        <tr>
+            <th>Description</th>
+            <th>Opened</th>
+            <th>Ticket ID</th>
+            <th>Call Type</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Closed</th>
+            <th>Balance used</th>
+            <th>Resolved within target?</th>
+        </tr>
 {
     foreach $incident ( @{ $incidents->{$customer}{summary} } )
     {
         $OUT .= Text::Template::fill_in_file( "incident.tmpl", HASH => { incident => \$incident } );
     }
 }
-</table>
+    </table>
 
-<p>Percentage of Incidents resolved within Service Level target:</p>
+    <p>Percentage of Incidents resolved within Service Level target:</p>
 
 {
     foreach $service ( @{ $services->{$customer} } ) 
@@ -45,3 +66,11 @@
         $OUT .= Text::Template::fill_in_file( "service.tmpl", HASH => { service => \$service, outage => \$outage } );
     }
 }
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+
+</body>
+</html>
