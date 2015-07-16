@@ -18,7 +18,7 @@
 {
     foreach $outage ( @{ $outage->{summary} } )
     {
-        $OUT .= Text::Template::fill_in_file( "outage.tmpl", HASH => { outage => \$outage } );
+        $OUT .= Text::Template::fill_in_file( "$templatedir/outage.tmpl", HASH => { outage => \$outage } );
     }
 }
 </table>

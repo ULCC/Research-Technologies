@@ -38,8 +38,11 @@ close $incident_fh;
 # output directory for reports
 my $OUTDIR = $ARGV[3];
 
+# template directory
+my $TEMPLATEDIR = "templates";
+
 # create reports
-my $template = Text::Template->new( SOURCE => 'report.tmpl' ) or die "Couldn't construct template: $Text::Template::ERROR";
+my $template = Text::Template->new( SOURCE => "$TEMPLATEDIR/report.tmpl" ) or die "Couldn't construct template: $Text::Template::ERROR";
 foreach my $customer ( reverse sort keys %$SERVICES )
 {
     my $dt = DateTime->new( year => $YEAR, month => $MONTH ),
@@ -49,6 +52,7 @@ foreach my $customer ( reverse sort keys %$SERVICES )
         services => \$SERVICES,
         incidents => \$INCIDENTS,
         outages => \$OUTAGES,
+        templatedir => $TEMPLATEDIR,
     };
 
     my $report_file = "$OUTDIR/$customer.html";

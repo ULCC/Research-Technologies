@@ -52,7 +52,7 @@
 {
     foreach $incident ( @{ $incidents->{$customer}{summary} } )
     {
-        $OUT .= Text::Template::fill_in_file( "incident.tmpl", HASH => { incident => \$incident } );
+        $OUT .= Text::Template::fill_in_file( "$templatedir/incident.tmpl", HASH => { incident => \$incident } );
     }
 }
     </table>
@@ -63,7 +63,7 @@
     foreach $service ( @{ $services->{$customer} } ) 
     {
         $outage = $outages->{ $service->{url} };
-        $OUT .= Text::Template::fill_in_file( "service.tmpl", HASH => { service => \$service, outage => \$outage } );
+        $OUT .= Text::Template::fill_in_file( "$templatedir/service.tmpl", HASH => { service => \$service, outage => \$outage, templatedir => $templatedir } );
     }
 }
 
