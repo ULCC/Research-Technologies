@@ -3,6 +3,7 @@ use Data::Dumper;
 use Date::Parse;
 use DateTime;
 use Text::CSV_XS;
+use Text::Template;
 use strict;
 
 my $MONTH = DateTime->now->subtract( months => 1 )->month;
@@ -27,9 +28,34 @@ open( my $outage_fh, "<", $outage_file ) or die "Error opening $outage_file: $!"
 
 # load incident data
 my $INCIDENTS;
-my $incident_file = $ARGV[1];
+my $incident_file = $ARGV[2];
 open( my $incident_fh, "<", $incident_file ) or die "Error opening $incident_file: $!";
 &load_incidents( $incident_fh );
+
+# create reports
+my $template = Text::Template->new( SOURCE => 'report.tmpl' ) or die "Couldn't construct template: $Text::Template::ERROR";
+foreach my $customer ( reverse sort keys %$SERVICES )
+{
+    my $dt = DateTime->new( year => $YEAR, month => $MONTH ),
+    my $vars = {
+        customer => $customer,
+        report_period => sprintf( "%s %s", $dt->month_name, $dt->year ),
+        services => \$SERVICES,
+        incidents => \$INCIDENTS,
+        outages => \$OUTAGES,
+    };
+    my $result = $template->fill_in( HASH => $vars );
+
+    if( defined $result )
+    {
+        print $result;
+        exit;
+    }
+    else
+    {
+        die "Couldn't fill in template: $Text::Template::ERROR";
+    }
+}
 
 sub load_services
 {
@@ -99,7 +125,11 @@ sub load_incidents
         # TODO does an incident opened in a contract period apply to that contract period?
         my $company = $row->{company};
         my $cpstart = $SERVICES->{$company};
-        warn "No contract start date for $company\n" && last unless defined $cpstart; # TODO better error reporting
+        unless( defined $cpstart )
+        {
+            warn "No contract start date for $company"; # TODO better error reporting
+            next;
+        }
         next unless ( $cpstart <= $opened && $opened <= $RPEND );
 
         my $time_worked = $row->{category} eq "Incident" ? 0 : $row->{"time_worked"};

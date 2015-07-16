@@ -1,0 +1,15 @@
+Service: { $service->{url} }
+
+Storage Usage (GB): ?
+Availability level achieved 100.00%
+Number of service outages: { scalar @{$outage->{summary}} }
+
+Service outage summary
+
+Description Start   End Duration
+{
+    foreach $outage ( @{ $outage->{summary} } )
+    {
+        $OUT .= Text::Template::fill_in_file( "outage.tmpl", HASH => { outage => \$outage } );
+    }
+}

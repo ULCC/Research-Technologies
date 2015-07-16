@@ -1,0 +1,33 @@
+
+Research Technologies Service: Monthly Report
+
+Customer: { $customer }
+Reporting Period: {  $report_period }
+
+Support Balance Summary
+
+Support allocation (hours): { $allocated = 21 }
+Balance used to date (hours): { $used = $incidents->{$customer}{balance_used} / ( 60 * 60 ) }
+Remaining balance (hours): { $allocated - $used }
+
+Support Cases Summary
+
+Summary of support activity this month - note time spent resolving "Incident" call types is not deducted from support allowance
+
+Description Opened  Ticket ID   Call Type   Priority    Status  Closed  Balance used    Resolved within target?
+{
+    foreach $incident ( @{ $incidents->{$customer}{summary} } )
+    {
+        $OUT .= Text::Template::fill_in_file( "incident.tmpl", HASH => { incident => \$incident } );
+    }
+}
+
+Percentage of Incidents resolved within Service Level target:
+
+{
+    foreach $service ( @{ $services->{$customer} } ) 
+    {
+        $outage = $outages->{ $service->{url} };
+        $OUT .= Text::Template::fill_in_file( "service.tmpl", HASH => { service => \$service, outage => \$outage } );
+    }
+}
