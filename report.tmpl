@@ -1,28 +1,42 @@
 
-Research Technologies Service: Monthly Report
+<h1>Research Technologies Service: Monthly Report</h1>
 
-Customer: { $customer }
-Reporting Period: {  $report_period }
+<h2>Customer: { $customer }</h2>
+<h2>Reporting Period: {  $report_period }</h2>
 
-Support Balance Summary
+<h3>Support Balance Summary</h3>
 
-Support allocation (hours): { $allocated = 21 }
-Balance used to date (hours): { $used = $incidents->{$customer}{balance_used} / ( 60 * 60 ) }
-Remaining balance (hours): { $allocated - $used }
+<table>
+<tr><th>Support allocation (hours):</th><td>{ $allocated = 21 }</td></tr>
+<tr><th>Balance used to date (hours):</th><td>{ $used = $incidents->{$customer}{balance_used} / ( 60 * 60 ) }</td></tr>
+<tr><th>Remaining balance (hours):</th><td>{ $allocated - $used }</td></tr>
+</table>
 
-Support Cases Summary
+<h3>Support Cases Summary</h3>
 
-Summary of support activity this month - note time spent resolving "Incident" call types is not deducted from support allowance
+<p><em>Summary of support activity this month - note time spent resolving "Incident" call types is not deducted from support allowance</em></p>
 
-Description Opened  Ticket ID   Call Type   Priority    Status  Closed  Balance used    Resolved within target?
+<table>
+    <tr>
+        <th>Description</th>
+        <th>Opened</th>
+        <th>Ticket ID</th>
+        <th>Call Type</th>
+        <th>Priority</th>
+        <th>Status</th>
+        <th>Closed</th>
+        <th>Balance used</th>
+        <th>Resolved within target?</th>
+    </tr>
 {
     foreach $incident ( @{ $incidents->{$customer}{summary} } )
     {
         $OUT .= Text::Template::fill_in_file( "incident.tmpl", HASH => { incident => \$incident } );
     }
 }
+</table>
 
-Percentage of Incidents resolved within Service Level target:
+<p>Percentage of Incidents resolved within Service Level target:</p>
 
 {
     foreach $service ( @{ $services->{$customer} } ) 

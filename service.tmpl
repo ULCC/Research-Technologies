@@ -1,15 +1,24 @@
-Service: { $service->{url} }
+<h3>Service: { $service->{url} }</h3>
 
-Storage Usage (GB): ?
-Availability level achieved 100.00%
-Number of service outages: { scalar @{$outage->{summary}} }
+<table>
+    <tr><th>Storage Usage (GB):</th><td>TODO</td></tr>
+    <tr><th>Availability level achieved:</th><td>TODO</td></tr>
+    <tr><th>Number of service outages:</th><td>{ scalar @{$outage->{summary}} }</td></tr>
+</table>
 
-Service outage summary
+<h4>Service outage summary</h4>
 
-Description Start   End Duration
+<tabLe>
+    <tr>
+        <th>Description</th>
+        <th>Start</th>
+        <th>End</th>
+        <th>Duration</th>
+    </tr>
 {
     foreach $outage ( @{ $outage->{summary} } )
     {
         $OUT .= Text::Template::fill_in_file( "outage.tmpl", HASH => { outage => \$outage } );
     }
 }
+</table>
