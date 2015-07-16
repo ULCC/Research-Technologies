@@ -19,18 +19,24 @@ my $SERVICES;
 my $service_file = $ARGV[0];
 open( my $service_fh, "<", $service_file ) or die "Error opening $service_file: $!";
 &load_services( $service_fh );
+close $service_fh;
 
 # load outage data
 my $OUTAGES;
 my $outage_file = $ARGV[1];
 open( my $outage_fh, "<", $outage_file ) or die "Error opening $outage_file: $!";
 &load_outages( $outage_fh );
+close $outage_fh;
 
 # load incident data
 my $INCIDENTS;
 my $incident_file = $ARGV[2];
 open( my $incident_fh, "<", $incident_file ) or die "Error opening $incident_file: $!";
 &load_incidents( $incident_fh );
+close $incident_fh;
+
+# output directory for reports
+my $OUTDIR = $ARGV[3];
 
 # create reports
 my $template = Text::Template->new( SOURCE => 'report.tmpl' ) or die "Couldn't construct template: $Text::Template::ERROR";
@@ -44,17 +50,18 @@ foreach my $customer ( reverse sort keys %$SERVICES )
         incidents => \$INCIDENTS,
         outages => \$OUTAGES,
     };
-    my $result = $template->fill_in( HASH => $vars );
 
-    if( defined $result )
+    my $report_file = "$OUTDIR/$customer.html";
+    open( my $fh, ">", $report_file ) or die "Could not write to $report_file: $!";
+    if( $template->fill_in( HASH => $vars, OUTPUT => $fh ) )
     {
-        print $result;
-        exit;
+        print "Wrote: $report_file\n";
     }
     else
     {
         die "Couldn't fill in template: $Text::Template::ERROR";
     }
+    close $fh;
 }
 
 sub load_services
