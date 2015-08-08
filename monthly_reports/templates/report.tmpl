@@ -6,9 +6,10 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
-    <title>{ "$report_period - $customer" }</title>
+    <title>{ $period->month_name } { $period->year } - { $customer->{"Customer Name"} }</title>
     <!-- Bootstrap -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+    <!--<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">-->
+    <link rel="stylesheet" href="bootstrap.min.css">
 
     <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -20,57 +21,167 @@
 
 <body>
 
-    <h1>Research Technologies Service: Monthly Report</h1>
+    <div class="container">
 
-    <h2>Customer: { $customer }</h2>
-    <h2>Reporting Period: {  $report_period }</h2>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="jumbotron">
+                    <h2>Research Technologies Service</h2>
+                    <h3>Monthly Report</h3>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="panel panel-default">
+                    <table class="table">
+                        <tr>
+                            <th>Customer</th>
+                            <td>{$customer->{"Customer Name"}}</td>
+                        </tr>
+                        <tr>
+                            <th>Number of Services</th>
+                            <td>{scalar @$services}</td>
+                        </tr>
+                        <tr>
+                            <th>Contract Period</th>
+                            <td><span class="badge">TODO</span></td>
+                        </tr>
+                        <tr>
+                            <th>Reporting Period</th>
+                            <td>{$period->month_name} {$period->year}</td>
+                        </tr>
+                        <tr>
+                            <th>Contacts *</th>
+                            <td><span class="badge">TODO</span></td>
+                        </tr>
+                    </table>
+                    <div class="alert alert-info"><strong>*</strong> Please let us know if contact details have changed.</div>
+                </div>
+            </div>
+        </div>
 
-    <h3>Support Balance Summary</h3>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="panel panel-{ $customer->{_balance_state} }">
+                    <div class="panel-heading">
+                        <h2 class="panel-title">Support Balance <span class="badge">{sprintf("%.0f",$customer->{_balance_ratio})}%</span></h2>
+                    </div>
+                    <div class="panel-body">
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-{$customer->{_balance_state}}" aria-valuenow="{$customer->{_balance_ratio}}" aria-valuemin="0" aria-valuemax="100" style="width: {sprintf("%.0f",$customer->{_balance_ratio})}%"></div>
+                        </div>
+                        <table class="table table-condensed">
+                            <thead>
+                                <th>Allocated (h)</th>
+                                <th>Used (h)</th>
+                                <th>Remaining (h)</th>
+                            </thead>
+                            <tr>
+                                <td>{sprintf("%.2f",$customer->{_balance_total})}</td>
+                                <td>{sprintf("%.2f",$customer->{_balance_current})}</td>
+                                <td>{sprintf("%.2f",$customer->{_balance_total} - $customer->{_balance_current})}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="panel panel-{$customer->{_target_state}?$customer->{_target_state}:"default"}">
+                    <div class="panel-heading">
+                        <h2 class="panel-title">Support Performance <span class="badge">{$customer->{_target_ratio}?sprintf("%.0f%",$customer->{_target_ratio }):"n/a"}</span></h2>
+                    </div>
+                    <div class="panel-body">
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-{$customer->{_target_state}?$customer->{_target_state}:"default"}" aria-valuenow="{$customer->{_target_ratio}}" aria-valuemin="0" aria-valuemax="100" style="width: {$customer->{_target_ratio}}%"></div>
+                        </div>
+                        <table class="table table-condensed">
+                            <thead>
+                                <th>Closed</th>
+                                <th>Closed within target</th>
+                            </thead>
+                            <tr>
+                                <td>{$customer->{_target_total}||0}</td>
+                                <td>{$customer->{_target_current}||0}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    <table>
-        <tr><th>Support allocation (hours):</th><td>{ $allocated = 21 }</td></tr>
-        <tr><th>Balance used to date (hours):</th><td>{ $used = $incidents->{$customer}{balance_used} / ( 60 * 60 ) }</td></tr>
-        <tr><th>Remaining balance (hours):</th><td>{ $allocated - $used }</td></tr>
-    </table>
-
-    <h3>Support Cases Summary</h3>
-
-    <p><em>Summary of support activity this month - note time spent resolving "Incident" call types is not deducted from support allowance</em></p>
-
-    <table>
-        <tr>
-            <th>Description</th>
-            <th>Opened</th>
-            <th>Ticket ID</th>
-            <th>Call Type</th>
-            <th>Priority</th>
-            <th>Status</th>
-            <th>Closed</th>
-            <th>Balance used</th>
-            <th>Resolved within target?</th>
-        </tr>
 {
-    foreach $incident ( @{ $incidents->{$customer}{summary} } )
+    foreach $service ( @{ $services } ) 
+    {
+        $OUT .= Text::Template::fill_in_file( "$templatedir/service.tmpl", HASH => { service => \$service, templatedir => $templatedir } );
+    }
+}
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h2 class="panel-title">Support Cases Summary <span class="badge">{scalar @{$customer->{_incidents}||[]}}</span></h2>
+                    </div>
+                    <div class="panel-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <th>Description</th>
+                                <th>Opened</th>
+                                <th>Ticket ID</th>
+                                <th>Call Type</th>
+                                <th>Priority</th>
+                                <th>Status</th>
+                                <th>Closed</th>
+                                <th>Balance used (s) *</th>
+                                <th>Resolved within target?</th>
+                            </thead>
+{
+    foreach $incident ( @{ $customer->{_incidents} } )
     {
         $OUT .= Text::Template::fill_in_file( "$templatedir/incident.tmpl", HASH => { incident => \$incident } );
     }
 }
-    </table>
+                        </table>
+                        <div class="alert alert-info"><strong>*</strong> Time spent resolving "Incident" call types is not deducted from support allowance</div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    <p>Percentage of Incidents resolved within Service Level target:</p>
 
+        <div class="row">
+            <div class="col-md-12">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h2 class="panel-title">Outages Summary <span class="badge">{scalar @{$customer->{_outages}||[]}}</span></h2>
+                    </div>
+                    <div class="panel-body">
+                        <tabLe class="table table-striped">
+                            <thead>
+                                <th>Description</th>
+                                <th>Start</th>
+                                <th>Duration (s)</th>
+                                <th>Status</th>
+                            </thead>
 {
-    foreach $service ( @{ $services->{$customer} } ) 
+    foreach $outage ( @{ $customer->{_outages} } )
     {
-        $outage = $outages->{ $service->{url} };
-        $OUT .= Text::Template::fill_in_file( "$templatedir/service.tmpl", HASH => { service => \$service, outage => \$outage, templatedir => $templatedir } );
+        $OUT .= Text::Template::fill_in_file( "$templatedir/outage.tmpl", HASH => { outage => \$outage } );
     }
 }
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div> <!-- container -->
 
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <!--<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>-->
+    <script src="jquery.min.js"></script>
     <!-- Include all compiled plugins (below), or include individual files as needed -->
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+    <!--<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>-->
+    <script src="bootstrap.min.js"></script>
 
 </body>
 </html>
