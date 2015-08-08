@@ -2,6 +2,7 @@
 use Data::Dumper;
 use Date::Parse;
 use DateTime;
+use DateTime::BusinessHours;
 use Text::CSV_XS;
 use Text::Template;
 use strict;
@@ -14,17 +15,24 @@ my $dt = DateTime->new(  year => $YEAR, month => $MONTH, day => 1 );
 my $RPSTART = $dt->epoch;
 my $RPEND = $dt->add( months => 1 )->subtract( seconds => 1 )->epoch;
 
-# incident targets
-my %TARGETS = (
-    "1 - Critical" => '', # 4 hours
-    "2 - High" => '', # 1 business day
-    "3 - Moderate" => '', # 4 business days
-    "4 - Low" => '', # 10 business days
-    "5" => '', # ?
+# business hours
+my $BIZ_HOURS_PER_DAY = 7;
+my $BH = DateTime::BusinessHours->new(
+    datetime1 => DateTime->now,
+    datetime2 => DateTime->now,
+    worktiming => [ [ 9, 12 ], [ 13, 17 ] ],
+    weekends => [ 6, 7 ], # sat and sun
+    holidayfile => 'data/holidays.txt'
 );
 
-# other constants
-my $SUPPORT_HOURS_PER_DAY = 7;
+# incident targets
+my %TARGETS = (
+    "1 - Critical" => 4, # 4 hours
+    "2 - High" => 1 * $BIZ_HOURS_PER_DAY, # 1 business day
+    "3 - Moderate" => 4 * $BIZ_HOURS_PER_DAY, # 4 business days
+    "4 - Low" => 10 * $BIZ_HOURS_PER_DAY, # 10 business days
+    "5" => '', # ?
+);
 
 # load service data
 my %CUSTOMERS;
@@ -58,7 +66,7 @@ my $template = Text::Template->new( SOURCE => "$TEMPLATEDIR/report.tmpl" ) or di
 foreach my $customer ( values %CUSTOMERS )
 {
     # support balance panel
-    $customer->{_balance_total} = $customer->{"Support Allocation Days"} * $SUPPORT_HOURS_PER_DAY; # hours
+    $customer->{_balance_total} = $customer->{"Support Allocation Days"} * $BIZ_HOURS_PER_DAY; # hours
     $customer->{_balance_current} = $customer->{_support_used_since_start_date} / 3600; # hours
     my $ratio = ( $customer->{_balance_current} / $customer->{_balance_total} ) * 100;
     $customer->{_balance_ratio} = $ratio;
@@ -171,8 +179,11 @@ sub load_incidents
 	{
         # convert DD-MM-YYYY HH:MM to YYYY-MM-DD HH:SS
         # BUG: When both the month and the date are specified in the date as numbers they are always parsed assuming that the month number comes before the date.
-        $row->{"opened_at"} =~ m|^([0-9]{2})-([0-9]{2})-([0-9]{4})\s([0-9]{2}):([0-9]{2})|; # 10-04-2015 10:36:26
-        my $opened = str2time( "$3-$2-$1 $4:$5" );
+        my $opened = 0;
+        if( $row->{"opened_at"} =~ m|^([0-9]{2})-([0-9]{2})-([0-9]{4})\s([0-9]{2}):([0-9]{2})| ) # 10-04-2015 10:36:26
+        {
+            $opened = str2time( "$3-$2-$1 $4:$5" );
+        }
 
         # filter incidents which didn't get opened in the contract period
         # TODO does an incident opened in a contract period apply to that contract period?
@@ -191,8 +202,12 @@ sub load_incidents
         $CUSTOMERS{$company}{_support_used_since_start_date} += $time_worked;
 
         # filter incidents not relevant to reporting period
-        $row->{"closed_at"} =~ m|^([0-9]{2})/([0-9]{2})/([0-9]{4})\s([0-9]{2}):([0-9]{2})|;
-        my $closed = str2time( "$3-$2-$1 $4:$5" );
+        print STDERR "Closed at: " . $row->{"closed at"} . "\n";
+        my $closed;
+        if( $row->{"closed_at"} =~ m|^([0-9]{2})-([0-9]{2})-([0-9]{4})\s([0-9]{2}):([0-9]{2})| )
+        {
+            $closed = str2time( "$3-$2-$1 $4:$5" );
+        }
         my $state = $row->{state};
         next unless
             ( defined $closed && $RPSTART <= $closed && $closed <= $RPEND ) # incident closed in reporting period
@@ -203,6 +218,19 @@ sub load_incidents
         if( $state eq "Resolved" || $state eq "Closed" )
         {
             $CUSTOMERS{$company}{_incidents_closed_in_period}++;
+
+            if( defined $closed )
+            {
+                # TODO need resolved date
+                # time spent (business hours)
+                $BH->{datetime1} = DateTime->from_epoch( epoch => $opened );
+                $BH->{datetime2} = DateTime->from_epoch( epoch => $closed );
+                $BH->calculate();
+                my $bhours = $BH->gethours();
+
+                print STDERR "$opened -> $closed : incident took $bhours business hours to complete\n";
+            }
+
             # TODO count incidnts closed with target
             $CUSTOMERS{$company}{_incidents_closed_within_target_in_period}++;
         }
