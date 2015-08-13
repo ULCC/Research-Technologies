@@ -77,9 +77,10 @@ foreach my $customer ( values %CUSTOMERS )
     $customer->{_target_current} = $customer->{_incidents_closed_within_target_in_period};
     if( $customer->{_target_total} )
     {
-        $ratio = ( $customer->{_target_current} / $customer->{_target_total} ) * 100;
-        $customer->{_target_ratio} = $ratio;
-        $customer->{_target_state} = $ratio >= 95 ? "success" : $ratio >= 85 ? "warning" : "danger";
+        # disable for now
+        #$ratio = ( $customer->{_target_current} / $customer->{_target_total} ) * 100;
+        #$customer->{_target_ratio} = $ratio;
+        #$customer->{_target_state} = $ratio >= 95 ? "success" : $ratio >= 85 ? "warning" : "danger";
     }
 
     foreach my $service ( @{ $SERVICES_BY_CUST{$customer->{"Customer Name"}} } )
@@ -100,8 +101,15 @@ foreach my $customer ( values %CUSTOMERS )
         $service->{_avail_state} = $ratio >= 95 ? "success" : $ratio >= 85 ? "warning" : "danger";
     }
 
+    # contract period
+    $customer->{"Start Date"} =~ m|^([0-9]{4})-([0-9]{2})-([0-9]{2})|;
+    my $cstart = DateTime->new( year => $1, month => $2, day => $3 );
+    my $cend = $cstart->clone->add( years => 1 )->subtract( days => 1 );
+
     my $vars = {
         customer => \$customer,
+        contract_start => \$cstart,
+        contract_end => \$cend,
         period => \( DateTime->new( year => $YEAR, month => $MONTH ) ),
         services => \( $SERVICES_BY_CUST{$customer->{"Customer Name"}} ),
         templatedir => \$TEMPLATEDIR,
@@ -202,7 +210,6 @@ sub load_incidents
         $CUSTOMERS{$company}{_support_used_since_start_date} += $time_worked;
 
         # filter incidents not relevant to reporting period
-        print STDERR "Closed at: " . $row->{"closed at"} . "\n";
         my $closed;
         if( $row->{"closed_at"} =~ m|^([0-9]{2})-([0-9]{2})-([0-9]{4})\s([0-9]{2}):([0-9]{2})| )
         {
@@ -219,17 +226,17 @@ sub load_incidents
         {
             $CUSTOMERS{$company}{_incidents_closed_in_period}++;
 
-            if( defined $closed )
-            {
-                # TODO need resolved date
-                # time spent (business hours)
-                $BH->{datetime1} = DateTime->from_epoch( epoch => $opened );
-                $BH->{datetime2} = DateTime->from_epoch( epoch => $closed );
-                $BH->calculate();
-                my $bhours = $BH->gethours();
-
-                print STDERR "$opened -> $closed : incident took $bhours business hours to complete\n";
-            }
+#            if( defined $closed )
+#            {
+#                # TODO need resolved date
+#                # time spent (business hours)
+#                $BH->{datetime1} = DateTime->from_epoch( epoch => $opened );
+#                $BH->{datetime2} = DateTime->from_epoch( epoch => $closed );
+#                $BH->calculate();
+#                my $bhours = $BH->gethours();
+#
+#                print STDERR "$opened -> $closed : incident took $bhours business hours to complete\n";
+#            }
 
             # TODO count incidnts closed with target
             $CUSTOMERS{$company}{_incidents_closed_within_target_in_period}++;
